@@ -34,7 +34,7 @@ Repository. [DOI: 10.24432/C5ZP40](https://doi.org/10.24432/C5ZP40).
 
 [GitHub Repository](https://github.com/2026AJ05974-Arun/MLAssignment2)
 
-Live Streamlit app: _add the Streamlit Community Cloud link here after deploying_
+Live Streamlit app: [mlassignment2-2026aj05974.streamlit.app](https://mlassignment2-2026aj05974.streamlit.app/)
 
 The repository contains:
 
@@ -175,5 +175,5 @@ Deployment notes:
   installed, retrain with `train_models.py` on the version that is available.
 - The `matplotlib` and `seaborn` packages from the assignment example are not
   needed, because the charts use Streamlit's built-in charts.
-- Live app link: add the Streamlit Community Cloud URL at the top of this
-  README after deploying.
+- The live app is at https://mlassignment2-2026aj05974.streamlit.app/ and is
+  linked at the top of this README.
