@@ -271,6 +271,12 @@ with tab_letters:
         width="stretch",
         height=500,
     )
+    st.download_button(
+        "Download classification report (CSV)",
+        report.round(4).to_csv(),
+        f"classification_report_{selected.split()[0].lower()}.csv",
+        key="report_download",
+    )
 
 with tab_data:
     st.dataframe(data.head(100), width="stretch", height=400)

@@ -26,6 +26,14 @@ I split the data 80/20 with stratification, using random state `20261106`. That
 gives 16,000 training rows and 4,000 test rows. `test_data.csv` has all 16
 features plus the `Class` column.
 
+About the duplicates: I kept them because they are part of the original
+dataset and removing rows would change what "the UCI data" means. They do have
+an effect, though. The training set has 937 repeated rows, and 377 of the 4,000
+test rows (about 9%) also appear exactly in the training set. That makes the
+scores a bit optimistic, mostly for KNN and the Decision Tree, which can
+memorise rows. The ranking of the models is unlikely to change because of it,
+but I would not treat the exact numbers as a perfect estimate for new data.
+
 The dataset is under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 Citation: Slate, D. (1991). Letter Recognition [Dataset]. UCI Machine Learning
 Repository. [DOI: 10.24432/C5ZP40](https://doi.org/10.24432/C5ZP40).
@@ -49,13 +57,13 @@ MLAssignment2/
 |-- model_metrics.csv
 |-- .gitignore
 |-- .streamlit/
-|   |-- config.toml
-|-- model/
+|   `-- config.toml
+`-- model/
     |-- logistic_regression.joblib
     |-- decision_tree.joblib
     |-- knn.joblib
     |-- gaussian_naive_bayes.joblib
-    |-- support_vector_machine.joblib
+    `-- support_vector_machine.joblib
 ```
 
 `train_data.csv` is not in the repository because the app never needs it. It
@@ -69,6 +77,10 @@ held-out rows. Since there are 26 classes, precision, recall and F1 are macro
 averages. AUC is one-vs-rest, macro averaged, and computed from predicted
 probabilities. MCC is the multiclass version. The numbers below come from my
 local run, rounded to four decimals.
+
+Data source: `train_data.csv` and `test_data.csv` were generated from the UCI
+Letter Recognition archive by `prepare_data.py`, and the models were trained
+from `train_data.csv` by `train_models.py`.
 
 Settings used (everything else is the scikit-learn default):
 
@@ -107,6 +119,26 @@ Logistic Regression, KNN and SVM have a `StandardScaler` inside their saved
 pipelines. For SVM I wrapped the model in 5-fold sigmoid calibration so it can
 give probabilities, which lets AUC be computed the same way for all five models.
 
+### Limitations
+
+KNN needs no training but is slow when predicting, because every test row is
+compared with all 16,000 training rows. The duplicate rows (377 of the 4,000
+test rows also appear in the training data) make the scores a bit optimistic,
+and everything comes from a single train/test split.
+
+### Preprocessing
+
+The only transformation is standardisation (zero mean, unit variance) for
+Logistic Regression, KNN and SVM, done by a `StandardScaler` inside each saved
+pipeline. The app passes raw feature values and the pipeline scales them.
+Decision Tree and Naive Bayes get the raw values. There is no other cleaning,
+encoding or feature selection.
+
+There is no leakage. `prepare_data.py` splits first, and `train_models.py` fits
+each pipeline (scaler included) on `train_data.csv` only. The test rows are only
+used for predicting and scoring, and nothing is refitted on an uploaded CSV. For
+the SVM, the 5-fold calibration also runs inside the training data.
+
 ## Reproduce the Local Run
 
 `prepare_data.py` downloads the UCI archive, checks the rows, features, classes
@@ -132,6 +164,32 @@ The app uses the saved models and starts with the bundled `test_data.csv`. You
 can upload your own CSV instead, as long as it has the same 16 numeric columns
 and a `Class` column. If the file does not have all 26 letters, AUC is averaged
 over the letters present. Nothing is retrained on the uploaded data.
+
+### How to use the app
+
+1. Open the app. It already shows results for the bundled test set.
+2. Optional: upload a CSV in the sidebar. The "Download sample CSV" button gives
+   a file in the right format.
+3. Pick a model in the dropdown. The metric cards and tabs change with it. The
+   comparison table always shows all five models.
+4. Use the tabs for the model comparison, confusion matrix, per-letter report
+   (with a CSV download of the classification report) and a data preview.
+
+Expected CSV format:
+
+| Column | Type | Notes |
+|---|---|---|
+| `x_box`, `y_box`, `width`, `high`, `onpix`, `x_bar`, `y_bar`, `x2bar`, `y2bar`, `xybar`, `x2ybr`, `xy2br`, `x_ege`, `xegvy`, `y_ege`, `yegvx` | integer (any numeric type works) | 16 feature columns, values 0 to 15, no missing values |
+| `Class` | text | one capital letter, A to Z |
+
+Column order does not matter and extra columns are ignored, but all 17 names
+must be present with exactly this spelling. Example (header and two rows):
+
+```text
+Class,x_box,y_box,width,high,onpix,x_bar,y_bar,x2bar,y2bar,xybar,x2ybr,xy2br,x_ege,xegvy,y_ege,yegvx
+U,5,10,8,8,10,8,8,4,5,6,6,8,9,5,8,10
+K,5,10,7,7,9,8,8,3,4,6,6,9,10,10,7,7
+```
 
 The sidebar has the CSV upload first and the model dropdown below it, so you
 can upload a file once and switch between models without uploading it again.
@@ -177,3 +235,13 @@ Deployment notes:
   needed, because the charts use Streamlit's built-in charts.
 - The live app is at https://mlassignment2-2026aj05974.streamlit.app/ and is
   linked at the top of this README.
+
+Troubleshooting deployment:
+
+- **Model fails to load or shows a version warning:** the app is probably
+  running a different scikit-learn than the one that saved the models. Use
+  `requirements.txt` as it is, pick Python 3.11 in the advanced settings and
+  reboot the app.
+- **Old version still showing after a push:** wait for the redeploy, or use
+  "Reboot app" in the app menu. If the link asks for a login, set the app's
+  sharing to public.
